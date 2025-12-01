@@ -204,13 +204,6 @@ def render():
         )
         return
 
-    st.warning(
-        "⚠️ Experimental feature.\n\n"
-        "- It only affects the machine running this app (PC/Pi).\n"
-        "- It may require administrator/root rights.\n"
-        "- Changing Wi-Fi can break your current network connection."
-    )
-
     st.markdown("### Available Wi-Fi networks")
 
     if st.button("Scan networks"):

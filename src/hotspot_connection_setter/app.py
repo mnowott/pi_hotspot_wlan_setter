@@ -1,12 +1,6 @@
-from pathlib import Path
-
 import streamlit as st
-from src.hotspot_connection_setter.tabs import tab_network, view_tab
+from hotspot_connection_setter.tabs import tab_network, view_tab
 import socket
-
-# === CONFIG ===
-CROP_WIDTH = 200
-CROP_HEIGHT = 200
 
 
 def has_internet(timeout: float = 3.0) -> bool:
@@ -24,14 +18,14 @@ def has_internet(timeout: float = 3.0) -> bool:
 
 
 st.set_page_config(
-    page_title=f"Image Cropper {CROP_WIDTH}x{CROP_HEIGHT}",
+    page_title=f"Wlan Hotspot Connector",
     layout="wide",
 )
 
-st.title(f"Local Image Cropper ({CROP_WIDTH} x {CROP_HEIGHT})")
+st.title(f"Wlan Hotspot Connector")
 st.write(
-    "Upload an image, move the fixed-size selection with buttons, "
-    "save crops, and manage/view saved images."
+    "Chose wlan network from available hotspots and connect to it."
+    "Portal is active for 15 minutes."
 )
 
 # ---------- Connectivity status ----------
