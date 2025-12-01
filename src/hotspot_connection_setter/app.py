@@ -47,7 +47,7 @@ with status_col2:
 
 # ---------- Tabs ----------
 
-tab_net, tab_view = st.tabs(["Network", "placeholder View"])
+tab_net, tab_view = st.tabs(["Network", "Environment"])
 
 
 with tab_net:
