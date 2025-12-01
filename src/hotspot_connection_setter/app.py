@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import streamlit as st
-from tabs import file_tab, view_tab, tab_network
+from src.hotspot_connection_setter.tabs import tab_network, view_tab
 import socket
 
 # === CONFIG ===
@@ -51,71 +51,15 @@ with status_col2:
             "internet connection is available."
         )
 
-# ---------- Sidebar: uploads, movement settings, output folder ----------
-
-st.sidebar.header("Upload Images")
-uploaded_files = st.sidebar.file_uploader(
-    "Choose PNG/JPG images from your computer",
-    type=["png", "jpg", "jpeg"],
-    accept_multiple_files=True,
-)
-
-if uploaded_files:
-    names = [f.name for f in uploaded_files]
-    selected_name = st.sidebar.selectbox(
-        "Select image to edit",
-        names,
-        key="uploaded_image_select",
-    )
-    selected_file = uploaded_files[names.index(selected_name)]
-else:
-    selected_name = None
-    selected_file = None
-
-st.sidebar.header("Move Selection")
-step = st.sidebar.number_input(
-    "Step size (pixels)",
-    min_value=1,
-    max_value=500,
-    value=20,
-)
-
-st.sidebar.header("Output folder")
-output_root_default = str(Path.cwd() / "output")
-output_folder_str = st.sidebar.text_input(
-    "Output folder on disk",
-    value=output_root_default,
-    key="output_folder",
-)
-output_folder = Path(output_folder_str)
-
 # ---------- Tabs ----------
 
-tab_manage, tab_view, tab_net = st.tabs(["Image management", "View", "Network"])
+tab_net, tab_view = st.tabs(["Network", "placeholder View"])
 
 
 with tab_net:
     # Network tab is still available even if we're offline,
     # since it might be used to *establish* connectivity.
     tab_network.render()
-
-with tab_manage:
-    if not online:
-        st.info(
-            "🚫 No internet connection detected.\n\n"
-            "Image management is temporarily disabled. "
-            "Please connect to the internet and rerun."
-        )
-    else:
-        file_tab.render(
-            uploaded_files=uploaded_files,
-            selected_name=selected_name,
-            selected_file=selected_file,
-            step=step,
-            output_folder=output_folder,
-            crop_width=CROP_WIDTH,
-            crop_height=CROP_HEIGHT,
-        )
 
 with tab_view:
     if not online:
@@ -126,5 +70,4 @@ with tab_view:
         )
     else:
         view_tab.render(
-            output_folder=output_folder,
         )
