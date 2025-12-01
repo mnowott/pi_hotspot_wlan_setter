@@ -1,5 +1,5 @@
 import streamlit as st
-from hotspot_connection_setter.tabs import tab_network, view_tab
+from hotspot_connection_setter.tabs import tab_network, env_tab
 import socket
 
 
@@ -56,12 +56,4 @@ with tab_net:
     tab_network.render()
 
 with tab_view:
-    if not online:
-        st.info(
-            "🚫 No internet connection detected.\n\n"
-            "Viewing saved images is temporarily disabled. "
-            "Please connect to the internet and rerun."
-        )
-    else:
-        view_tab.render(
-        )
+    env_tab.render()

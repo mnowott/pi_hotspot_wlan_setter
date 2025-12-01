@@ -1,0 +1,1 @@
+poetry run hotspot-ui --port 80 --address 0.0.0.0

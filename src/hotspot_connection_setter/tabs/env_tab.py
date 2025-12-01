@@ -3,7 +3,7 @@ from typing import List, Dict
 
 import streamlit as st
 
-ENV_FILE = Path.home() / ".hotspot_connection_setter.env"
+ENV_FILE = Path.home() / ".env"
 
 
 def _load_env_file() -> List[Dict[str, str]]:

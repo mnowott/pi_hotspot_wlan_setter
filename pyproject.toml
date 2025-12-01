@@ -8,6 +8,8 @@ streamlit = "^1.51.0"
 
 # This defines the CLI command:
 ipython = "^9.7.0"
+ruff = "^0.14.7"
+mypy = "^1.19.0"
 [tool.poetry.scripts]
 hotspot-ui = "hotspot_connection_setter.cli:main"
 
