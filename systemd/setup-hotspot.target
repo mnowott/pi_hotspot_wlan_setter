@@ -1,0 +1,7 @@
+[Unit]
+Description=Run Hotspot + Captive Portal + Hotspot UI
+Requires=hostapd.service dnsmasq.service captive-portal.service hotspot-ui.service
+After=network.target
+
+[Install]
+WantedBy=multi-user.target

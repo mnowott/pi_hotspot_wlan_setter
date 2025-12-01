@@ -1,0 +1,9 @@
+[Unit]
+Description=Shutdown hotspot after 15 minutes
+
+[Timer]
+OnActiveSec=15min
+Unit=hotspot-shutdown.service
+
+[Install]
+WantedBy=multi-user.target
