@@ -1,0 +1,13 @@
+[Unit]
+Description=Hotspot WLAN Setup UI (Poetry / Streamlit)
+After=network.target hostapd.service dnsmasq.service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/pi_hotspot_wlan_setter
+Environment="PATH=/home/pi/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart=/usr/bin/env poetry run hotspot-ui --port 9000 --address 127.0.0.1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

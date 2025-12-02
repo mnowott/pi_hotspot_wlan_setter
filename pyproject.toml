@@ -1,10 +1,22 @@
 [tool.poetry]
-name = 'Hotspot Connection setter'
-version = '0.1.0'
+name = "Hotspot Connection setter"
+version = "0.1.0"
 
 [tool.poetry.dependencies]
-python = '^3.13'
+python = "^3.13"
+streamlit = "^1.51.0"
+
+# This defines the CLI command:
+ipython = "^9.7.0"
+ruff = "^0.14.7"
+mypy = "^1.19.0"
+[tool.poetry.scripts]
+hotspot-ui = "hotspot_connection_setter.cli:main"
+
+[[tool.poetry.packages]]
+include = "hotspot_connection_setter"
+from = "src"
 
 [build-system]
-requires = ['poetry-core~=1.0']
-build-backend = 'poetry.core.masonry.api'
+requires = ["poetry-core~=1.0"]
+build-backend = "poetry.core.masonry.api"

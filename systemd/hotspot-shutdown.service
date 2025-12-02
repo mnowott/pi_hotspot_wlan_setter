@@ -1,0 +1,6 @@
+[Unit]
+Description=Stop Hotspot after timeout
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl stop setup-hotspot.target
