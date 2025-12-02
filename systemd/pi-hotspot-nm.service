@@ -1,0 +1,13 @@
+[Unit]
+Description=NetworkManager Wi-Fi Hotspot (pi-setup-hotspot)
+Requires=NetworkManager.service
+After=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nmcli connection up pi-setup-hotspot
+ExecStop=/usr/bin/nmcli connection down pi-setup-hotspot
+
+[Install]
+WantedBy=multi-user.target
