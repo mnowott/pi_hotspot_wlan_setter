@@ -57,11 +57,15 @@ All of this is handled automatically by `install.sh`.
 This infra repo is intended to live next to your app repo:
 
 ```text
-/home/pi/
-├── pi_hotspot_wlan_setter/   # your app (Streamlit/Poetry)
-└── pi_hotspot_infra/         # this repo
+/pi_hotspot_wlan_setter/ # this repo  # your app (Streamlit/Poetry)
+└── /         
     ├── README.md
     ├── install.sh
+    ├── src/ # streamlit app
+    │   ├── hotspot_connection_setter/
+    │   │   ├── app.py # streamlit app
+    │   │   ├── cli.py # entrypoint for systemd to take on command line arguments
+    │   │   ├── tabs/  # .py file per app tab
     ├── configs/
     │   ├── hostapd.conf
     │   ├── dnsmasq-hotspot.conf
