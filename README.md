@@ -17,7 +17,7 @@ All HTTP traffic from hotspot clients is transparently redirected to this app fo
 
 ## Features
 
-* Password-protected Wi-Fi hotspot using **hostapd**
+* Password-protected Wi-Fi hotspot using **NetworkManager** (Wi-Fi AP connection on `wlan0`)
 * **DHCP + DNS** using **dnsmasq**, with all DNS names resolved to the Pi → captive-portal behavior
 * **iptables** redirects client HTTP (port 80) → `hotspot-ui` on port **9000**
 * The app is managed by **systemd**, started via **Poetry** using **Python 3.13**
@@ -35,7 +35,7 @@ All HTTP traffic from hotspot clients is transparently redirected to this app fo
 
 * User: `pi`
 
-* Your app repo cloned to:
+* This repository cloned to:
 
   ```text
   /home/pi/pi_hotspot_wlan_setter
@@ -45,8 +45,9 @@ All HTTP traffic from hotspot clients is transparently redirected to this app fo
 
 * You are OK with:
 
-  * Switching networking from **NetworkManager → dhcpcd**
   * Installing **Python 3.13** from source under `/usr/local/bin/python3.13`
+  * Using **NetworkManager** to manage the hotspot connection on `wlan0`
+  * Adding a **dnsmasq** config for the hotspot network
 
 All of this is handled automatically by `install.sh`.
 
@@ -54,41 +55,34 @@ All of this is handled automatically by `install.sh`.
 
 ## Repository Layout
 
-This infra repo is intended to live next to your app repo:
+This repo contains both the app and the infra:
 
 ```text
-/pi_hotspot_wlan_setter/ # this repo  # your app (Streamlit/Poetry)
-└── /         
-    ├── README.md
-    ├── install.sh
-    ├── src/hotspot_connection_setter/ # streamlit app
-    │   ├── app.py # streamlit app
-    │   ├── cli.py # entrypoint for systemd to take on command line arguments
-    │   ├── tabs/  # .py file per app tab
-    ├── configs/
-    │   ├── hostapd.conf
-    │   ├── dnsmasq-hotspot.conf
-    │   └── dhcpcd-wlan0-hotspot.conf.snippet
-    ├── scripts/
-    │   └── captive-portal.sh
-    └── systemd/
-        ├── hotspot-ui.service
-        ├── captive-portal.service
-        ├── setup-hotspot.target
-        ├── hotspot-shutdown.service
-        └── hotspot-shutdown.timer
+/pi_hotspot_wlan_setter/
+├── README.md
+├── install.sh
+├── pyproject.toml
+├── src/hotspot_connection_setter/      # Streamlit app package
+│   ├── app.py                          # Streamlit app
+│   ├── cli.py                          # CLI entrypoint (hotspot-ui)
+│   └── tabs/                           # One .py file per app tab
+├── configs/
+│   └── dnsmasq-hotspot.conf
+├── scripts/
+│   └── captive-portal.sh
+└── systemd/
+    ├── hotspot-ui.service
+    ├── captive-portal.service
+    ├── pi-hotspot-nm.service
+    ├── setup-hotspot.target
+    ├── hotspot-shutdown.service
+    └── hotspot-shutdown.timer
 ```
 
 ### Components
 
-* `configs/hostapd.conf`
-  Wi-Fi hotspot configuration (SSID, password, channel, etc.).
-
 * `configs/dnsmasq-hotspot.conf`
   DHCP + DNS configuration for `192.168.50.0/24`, with all DNS names resolved to `192.168.50.1`.
-
-* `configs/dhcpcd-wlan0-hotspot.conf.snippet`
-  Snippet appended to `/etc/dhcpcd.conf` to give `wlan0` a static IP and disable `wpa_supplicant`.
 
 * `scripts/captive-portal.sh`
   Sets and clears iptables NAT rules to redirect HTTP on `wlan0:80` → `localhost:9000`.
@@ -101,12 +95,18 @@ This infra repo is intended to live next to your app repo:
   ```
 
 * `systemd/captive-portal.service`
-  `Type=oneshot` service that calls `captive-portal.sh start` on start and `captive-portal.sh stop` on stop.
+  `Type=oneshot` service that calls `captive-portal.sh start` on start and `captive-portal.sh stop` on stop, and keeps its “active” state with `RemainAfterExit=yes`.
+
+* `systemd/pi-hotspot-nm.service`
+  `Type=oneshot` service that uses **NetworkManager** to bring the hotspot connection up/down:
+
+  * `nmcli connection up pi-setup-hotspot`
+  * `nmcli connection down pi-setup-hotspot`
 
 * `systemd/setup-hotspot.target`
   Systemd target that ties everything together:
 
-  * `hostapd.service`
+  * `pi-hotspot-nm.service` (NetworkManager hotspot)
   * `dnsmasq.service`
   * `captive-portal.service`
   * `hotspot-ui.service`
@@ -120,26 +120,23 @@ This infra repo is intended to live next to your app repo:
 
 > ⚠️ Installation assumes you are OK with:
 >
-> * Disabling NetworkManager
-> * Enabling dhcpcd
 > * Installing Python 3.13 from source
+> * Using NetworkManager + nmcli to create/manage a Wi-Fi AP connection
+> * Having dnsmasq run for the hotspot subnet
 
-### 1. Clone repositories
+### 1. Clone the repository
 
 As user `pi`:
 
 ```bash
 cd ~
 git clone https://github.com/mnowott/pi_hotspot_wlan_setter.git
-git clone https://github.com/<your-account>/pi_hotspot_infra.git
+cd pi_hotspot_wlan_setter
 ```
-
-Adjust the second URL to wherever you host this infra repo.
 
 ### 2. Make the installer executable
 
 ```bash
-cd ~/pi_hotspot_infra
 chmod +x install.sh
 ```
 
@@ -153,15 +150,23 @@ sudo ./install.sh
 
 1. **Install APT packages**
 
-   * `hostapd`, `dnsmasq`, `iptables-persistent`
+   * `dnsmasq`, `iptables-persistent`, `network-manager`
    * Build tools and libraries needed for Python 3.13
 
-2. **Configure networking**
+2. **Ensure NetworkManager is active**
 
-   * Disable and stop `NetworkManager` (if present)
-   * Enable and start `dhcpcd`
-   * Stop and disable global autostart of `hostapd` and `dnsmasq`
-     (they’re started only via `setup-hotspot.target`)
+   * Enable and start `NetworkManager`:
+
+     ```bash
+     systemctl enable --now NetworkManager
+     ```
+
+   * Stop and disable the global `dnsmasq` service (we only start it as part of the hotspot):
+
+     ```bash
+     systemctl stop dnsmasq
+     systemctl disable dnsmasq
+     ```
 
 3. **Install Python 3.13**
 
@@ -171,7 +176,7 @@ sudo ./install.sh
 4. **Install Poetry**
 
    * Ensure pip for Python 3.13
-   * Install Poetry for user `pi` with Python 3.13
+   * Install Poetry for user `pi` using Python 3.13 (as a user-level tool: `~/.local/bin/poetry`)
 
 5. **Install your app via Poetry**
 
@@ -183,17 +188,34 @@ sudo ./install.sh
      poetry install --no-interaction
      ```
 
-6. **Install configs**
+6. **Install dnsmasq config**
 
-   * Copy `configs/hostapd.conf` to `/etc/hostapd/hostapd.conf` and set `DAEMON_CONF` in `/etc/default/hostapd`
-   * Backup `/etc/dnsmasq.conf` if non-empty and copy `configs/dnsmasq-hotspot.conf` to `/etc/dnsmasq.d/hotspot.conf`
-   * Append `configs/dhcpcd-wlan0-hotspot.conf.snippet` to `/etc/dhcpcd.conf` if not already present
+   * Backup `/etc/dnsmasq.conf` if non-empty
 
-7. **Install captive portal script**
+   * Replace `/etc/dnsmasq.conf` with:
+
+     ```ini
+     conf-dir=/etc/dnsmasq.d
+     ```
+
+   * Install `configs/dnsmasq-hotspot.conf` as `/etc/dnsmasq.d/hotspot.conf`
+
+7. **Create/Update NetworkManager hotspot connection**
+
+   * Use `nmcli` to create/modify a Wi-Fi AP connection called `pi-setup-hotspot` with:
+
+     * Interface: `wlan0`
+     * Mode: `ap`
+     * SSID: `Pi-Setup` (default, configurable)
+     * Password: `ChangeMe123` (default, configurable)
+     * Static IPv4: `192.168.50.1/24` on `wlan0`
+     * IPv6 disabled
+
+8. **Install captive portal script**
 
    * Copy `scripts/captive-portal.sh` to `/usr/local/bin/captive-portal.sh` and make it executable
 
-8. **Install systemd units**
+9. **Install systemd units**
 
    * Copy units from `systemd/` to `/etc/systemd/system/`
    * Run `systemctl daemon-reload`
@@ -202,7 +224,7 @@ sudo ./install.sh
      * `setup-hotspot.target`
      * `hotspot-shutdown.timer`
 
-After installation, a summary is printed showing how to control the hotspot.
+After installation, a summary is printed describing boot behavior and manual control.
 
 ---
 
@@ -212,9 +234,10 @@ After installation, a summary is printed showing how to control the hotspot.
 
 * `setup-hotspot.target` starts automatically, which starts:
 
-  * `hostapd` (Wi-Fi hotspot, default SSID: `Pi-Setup`)
-  * `dnsmasq` (DHCP + DNS)
-  * `captive-portal.service` (iptables redirect)
+  * `pi-hotspot-nm.service`
+    → `nmcli connection up pi-setup-hotspot` (NetworkManager hotspot on `wlan0` with IP `192.168.50.1`)
+  * `dnsmasq` (DHCP + DNS on `192.168.50.0/24`)
+  * `captive-portal.service` (iptables redirect 80 → 9000)
   * `hotspot-ui.service` (your app via Poetry on `127.0.0.1:9000`)
 
 * `hotspot-shutdown.timer` also starts automatically.
@@ -225,10 +248,16 @@ After installation, a summary is printed showing how to control the hotspot.
     systemctl stop setup-hotspot.target
     ```
 
-  * This stops all hotspot-related services and clears the NAT rules.
+  * This stops:
+
+    * The NetworkManager hotspot connection (`nmcli connection down pi-setup-hotspot`)
+    * `dnsmasq`
+    * `captive-portal.service` (which flushes iptables NAT rules)
+    * `hotspot-ui.service`
 
 Result:
 On boot, the Pi exposes a hotspot for 15 minutes, and then shuts it down automatically.
+NetworkManager remains in control of networking before and after the hotspot session.
 
 ---
 
@@ -238,12 +267,13 @@ On boot, the Pi exposes a hotspot for 15 minutes, and then shuts it down automat
 
 1. On your client device (phone/laptop), connect to:
 
-   * **SSID**: `Pi-Setup`
-   * **Password**: the one set in `configs/hostapd.conf` (default: `ChangeMe123` – change it!)
+   * **SSID**: `Pi-Setup` (or whatever you set in `install.sh`)
+   * **Password**: the one configured as `HOTSPOT_PSK` in `install.sh`
+     (default: `ChangeMe123` – **change it!**)
 
 2. Open any **HTTP** URL (e.g. `http://example.com`):
 
-   * All DNS resolves to `192.168.50.1` (Pi)
+   * All DNS resolves to `192.168.50.1` (the Pi)
    * iptables redirects port 80 on `wlan0` to `localhost:9000`
    * You see the `hotspot-ui` app
 
@@ -279,8 +309,8 @@ Even with auto-start enabled, you can control the hotspot manually:
 Useful commands:
 
 ```bash
-# See recent logs for hotspot services
-journalctl -u hostapd -u dnsmasq -u hotspot-ui -u captive-portal --since "10 min ago"
+# See recent logs for hotspot-related services
+journalctl -u NetworkManager -u dnsmasq -u hotspot-ui -u captive-portal --since "10 min ago"
 
 # Follow the app logs in real time
 journalctl -u hotspot-ui.service -f
@@ -292,12 +322,33 @@ journalctl -u hotspot-ui.service -f
 
 ### Change SSID / password
 
-Edit `configs/hostapd.conf` before installation, or after installation edit:
+**Option 1: Edit `install.sh` before running it**
+
+* Change these variables near the top:
+
+  ```bash
+  NM_HOTSPOT_NAME="pi-setup-hotspot"
+  HOTSPOT_SSID="Pi-Setup"
+  HOTSPOT_PSK="ChangeMe123"
+  HOTSPOT_IP="192.168.50.1/24"
+  ```
+
+Re-run `install.sh` (or just re-run the `nmcli connection modify` commands manually) to update the hotspot connection.
+
+**Option 2: Use nmcli / NetworkManager after install**
 
 ```bash
-sudo nano /etc/hostapd/hostapd.conf
-sudo systemctl restart hostapd
+nmcli connection modify pi-setup-hotspot 802-11-wireless.ssid "MyNewSSID"
+nmcli connection modify pi-setup-hotspot 802-11-wireless-security.psk "MyNewSecret123"
 ```
+
+Then either:
+
+```bash
+sudo systemctl restart setup-hotspot.target
+```
+
+or just reboot.
 
 ### Change timeout duration
 
@@ -317,7 +368,7 @@ sudo systemctl restart hotspot-shutdown.timer
 
 ### Change app port
 
-If you change the app port in `hotspot-ui.service`, also update `APP_PORT` in `scripts/captive-portal.sh` so iptables redirects to the correct port.
+If you change the app port in `hotspot-ui.service`, also update `APP_PORT` in `scripts/captive-portal.sh` so iptables redirects to the right port.
 
 ### Change user / paths
 
@@ -341,16 +392,16 @@ To undo the basic setup:
 
 2. Optionally clean up config files:
 
-   * `/etc/hostapd/hostapd.conf`
    * `/etc/dnsmasq.d/hotspot.conf`
-   * The hotspot snippet in `/etc/dhcpcd.conf`
+   * (Optionally) restore `/etc/dnsmasq.conf` from backup
 
-3. Optionally re-enable NetworkManager and disable dhcpcd:
+3. Optionally remove the NetworkManager hotspot connection:
 
    ```bash
-   sudo systemctl enable --now NetworkManager
-   sudo systemctl disable --now dhcpcd
+   nmcli connection delete pi-setup-hotspot
    ```
+
+4. You can keep NetworkManager as-is; no need to change system-wide networking.
 
 A scripted `uninstall.sh` can be added to automate this.
 
