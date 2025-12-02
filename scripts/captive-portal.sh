@@ -14,10 +14,6 @@ case "$1" in
     iptables -t nat -A PREROUTING -i "$WLAN_IF" -p tcp --dport 80 \
       -j REDIRECT --to-port "$APP_PORT"
 
-    # optional: also redirect 8080 → 9000 if needed
-    # iptables -t nat -A PREROUTING -i "$WLAN_IF" -p tcp --dport 8080 \
-    #   -j REDIRECT --to-port "$APP_PORT"
-
     ;;
 
   stop)

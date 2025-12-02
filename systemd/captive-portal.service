@@ -1,6 +1,6 @@
 [Unit]
 Description=Captive Portal iptables rules
-After=network.target
+After=network-online.target
 
 [Service]
 Type=oneshot

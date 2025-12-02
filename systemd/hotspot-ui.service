@@ -1,6 +1,7 @@
 [Unit]
 Description=Hotspot WLAN Setup UI (Poetry / Streamlit)
-After=network.target hostapd.service dnsmasq.service
+After=network-online.target pi-hotspot-nm.service
+Wants=pi-hotspot-nm.service
 
 [Service]
 User=pi
