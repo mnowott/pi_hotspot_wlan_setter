@@ -1,4 +1,3 @@
-````markdown
 # pi_hotspot_infra
 
 Infrastructure to turn a **Raspberry Pi Zero 2 W** (Pi OS 64-bit) into a **captive-portal Wi-Fi hotspot** that serves your WLAN setup UI from:
