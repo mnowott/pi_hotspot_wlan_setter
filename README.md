@@ -61,11 +61,10 @@ This infra repo is intended to live next to your app repo:
 └── /         
     ├── README.md
     ├── install.sh
-    ├── src/ # streamlit app
-    │   ├── hotspot_connection_setter/
-    │   │   ├── app.py # streamlit app
-    │   │   ├── cli.py # entrypoint for systemd to take on command line arguments
-    │   │   ├── tabs/  # .py file per app tab
+    ├── src/hotspot_connection_setter/ # streamlit app
+    │   ├── app.py # streamlit app
+    │   ├── cli.py # entrypoint for systemd to take on command line arguments
+    │   ├── tabs/  # .py file per app tab
     ├── configs/
     │   ├── hostapd.conf
     │   ├── dnsmasq-hotspot.conf
