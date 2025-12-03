@@ -1,15 +1,18 @@
 [tool.poetry]
-name = "Hotspot Connection setter"
+name = "hotspot-connection-setter"
 version = "0.1.0"
+description = "Hotspot connection setup UI for Raspberry Pi"
+authors = ["Your Name <you@example.com>"]  # optional, adjust or remove
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = ">=3.11,<4.0"
 streamlit = "^1.51.0"
 
-# This defines the CLI command:
+[tool.poetry.group.dev.dependencies]
 ipython = "^9.7.0"
 ruff = "^0.14.7"
 mypy = "^1.19.0"
+
 [tool.poetry.scripts]
 hotspot-ui = "hotspot_connection_setter.cli:main"
 

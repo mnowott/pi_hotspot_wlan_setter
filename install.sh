@@ -6,12 +6,6 @@ APP_USER=pi
 APP_HOME="/home/$APP_USER"
 APP_DIR="$APP_HOME/pi_hotspot_wlan_setter"
 
-PY_VER="3.13.7"
-PY_TGZ="Python-$PY_VER.tgz"
-PY_DIR="Python-$PY_VER"
-PY_URL="https://www.python.org/ftp/python/$PY_VER/$PY_TGZ"
-PY_BIN="/usr/local/bin/python3.13"
-
 NM_HOTSPOT_NAME="pi-setup-hotspot"
 HOTSPOT_SSID="Pi-Setup"
 HOTSPOT_PSK="ChangeMe123"   # CHANGE THIS
@@ -26,12 +20,11 @@ fi
 echo "[*] Updating apt packages..."
 apt update
 
-echo "[*] Installing system packages (dnsmasq + iptables + build deps + NetworkManager)..."
+echo "[*] Installing system packages (Python, Poetry, dnsmasq, iptables, NetworkManager)..."
 apt install -y \
+  python3 python3-venv python3-pip python3-poetry \
   dnsmasq iptables-persistent network-manager \
-  build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
-  libnss3-dev libssl-dev libreadline-dev libffi-dev \
-  libsqlite3-dev wget git
+  git
 
 echo "[*] Ensuring NetworkManager is enabled and running..."
 systemctl enable --now NetworkManager
@@ -40,32 +33,6 @@ echo "[*] Ensuring dnsmasq service is not auto-starting on boot (we start it via
 systemctl stop dnsmasq || true
 systemctl disable dnsmasq || true
 
-echo "[*] Ensuring local Python $PY_VER at $PY_BIN..."
-if [[ -x "$PY_BIN" ]]; then
-  echo "  - Found existing $PY_BIN, not rebuilding."
-else
-  echo "  - $PY_BIN not found, building Python $PY_VER from source..."
-  cd /tmp
-  if [[ ! -f "$PY_TGZ" ]]; then
-    wget "$PY_URL"
-  fi
-  if [[ ! -d "$PY_DIR" ]]; then
-    tar -xf "$PY_TGZ"
-  fi
-  cd "$PY_DIR"
-  ./configure
-  make -j"$(nproc)"
-  make altinstall   # installs /usr/local/bin/python3.13
-  echo "  - Built and installed python3.13 at $PY_BIN"
-fi
-
-echo "[*] Ensuring pip for python3.13 at $PY_BIN..."
-"$PY_BIN" -m ensurepip --upgrade || true
-"$PY_BIN" -m pip install --upgrade pip
-
-echo "[*] Installing Poetry for user $APP_USER (using python3.13)..."
-sudo -u "$APP_USER" -H "$PY_BIN" -m pip install --user poetry
-
 echo "[*] Checking app directory at $APP_DIR..."
 if [[ ! -d "$APP_DIR" ]]; then
   echo "ERROR: App directory $APP_DIR not found."
@@ -73,11 +40,10 @@ if [[ ! -d "$APP_DIR" ]]; then
   exit 1
 fi
 
-echo "[*] Running 'poetry install' for the app (from repo root, Python 3.13)..."
+echo "[*] Running 'poetry install' for the app (using system Python)..."
 sudo -u "$APP_USER" -H bash -lc "
   cd '$APP_DIR'
-  export PATH=\$HOME/.local/bin:\$PATH
-  poetry env use '$PY_BIN'
+  export PATH=\$HOME/.local/bin:/usr/local/bin:/usr/bin:\$PATH
   poetry install --no-interaction
 "
 
@@ -130,7 +96,7 @@ echo
 echo "=========================================================="
 echo "Installation complete."
 echo
-echo "Python 3.13 used at: $PY_BIN"
+echo "Using system Python (e.g. python3 from Pi OS) with a Poetry-managed virtualenv."
 echo
 echo "On reboot:"
 echo "  - NetworkManager brings up the system normally"
