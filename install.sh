@@ -86,7 +86,7 @@ install -m 644 "$APP_DIR/systemd/captive-portal.service"      /etc/systemd/syste
 install -m 644 "$APP_DIR/systemd/pi-hotspot-nm.service"       /etc/systemd/system/pi-hotspot-nm.service
 install -m 644 "$APP_DIR/systemd/setup-hotspot.target"        /etc/systemd/system/setup-hotspot.target
 install -m 644 "$APP_DIR/systemd/hotspot-shutdown.service"    /etc/systemd/system/hotspot-shutdown.service
-install -m 644 "$APP_DIR/systemd/hotspot-shutdown.timer"      /etc/systemd/system/hotspot-shutdown.timer"
+install -m 644 "$APP_DIR/systemd/hotspot-shutdown.timer"      /etc/systemd/system/hotspot-shutdown.timer
 install -m 644 "$APP_DIR/systemd/hotspot-onboot.service"      /etc/systemd/system/hotspot-onboot.service
 
 echo "[*] Reloading systemd..."
