@@ -10,6 +10,7 @@ PY_VER="3.13.7"
 PY_TGZ="Python-$PY_VER.tgz"
 PY_DIR="Python-$PY_VER"
 PY_URL="https://www.python.org/ftp/python/$PY_VER/$PY_TGZ"
+PY_BIN="/usr/local/bin/python3.13"
 
 NM_HOTSPOT_NAME="pi-setup-hotspot"
 HOTSPOT_SSID="Pi-Setup"
@@ -25,7 +26,7 @@ fi
 echo "[*] Updating apt packages..."
 apt update
 
-echo "[*] Installing system packages (dnsmasq + iptables + build deps)..."
+echo "[*] Installing system packages (dnsmasq + iptables + build deps + NetworkManager)..."
 apt install -y \
   dnsmasq iptables-persistent network-manager \
   build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
@@ -39,12 +40,11 @@ echo "[*] Ensuring dnsmasq service is not auto-starting on boot (we start it via
 systemctl stop dnsmasq || true
 systemctl disable dnsmasq || true
 
-echo "[*] Installing Python $PY_VER if needed..."
-PY_BIN=""
-if command -v python3.13 >/dev/null 2>&1; then
-  PY_BIN="$(command -v python3.13)"
-  echo "  - python3.13 already present at $PY_BIN, skipping build."
+echo "[*] Ensuring local Python $PY_VER at $PY_BIN..."
+if [[ -x "$PY_BIN" ]]; then
+  echo "  - Found existing $PY_BIN, not rebuilding."
 else
+  echo "  - $PY_BIN not found, building Python $PY_VER from source..."
   cd /tmp
   if [[ ! -f "$PY_TGZ" ]]; then
     wget "$PY_URL"
@@ -56,7 +56,6 @@ else
   ./configure --enable-optimizations
   make -j"$(nproc)"
   make altinstall   # installs /usr/local/bin/python3.13
-  PY_BIN="/usr/local/bin/python3.13"
   echo "  - Built and installed python3.13 at $PY_BIN"
 fi
 
@@ -89,7 +88,7 @@ if [[ -s /etc/dnsmasq.conf ]]; then
 fi
 # Make sure dnsmasq uses the /etc/dnsmasq.d/ directory
 echo 'conf-dir=/etc/dnsmasq.d' > /etc/dnsmasq.conf
-install -m 644 configs/dnsmasq-hotspot.conf /etc/dnsmasq.d/hotspot.conf
+install -m 644 "$APP_DIR/configs/dnsmasq-hotspot.conf" /etc/dnsmasq.d/hotspot.conf
 
 echo "[*] Creating/Updating NetworkManager hotspot connection '$NM_HOTSPOT_NAME'..."
 # Check if the connection already exists
@@ -110,15 +109,15 @@ nmcli connection modify "$NM_HOTSPOT_NAME" \
   ipv6.method ignore
 
 echo "[*] Installing captive portal script..."
-install -m 755 scripts/captive-portal.sh /usr/local/bin/captive-portal.sh
+install -m 755 "$APP_DIR/scripts/captive-portal.sh" /usr/local/bin/captive-portal.sh
 
 echo "[*] Installing systemd units..."
-install -m 644 systemd/hotspot-ui.service /etc/systemd/system/hotspot-ui.service
-install -m 644 systemd/captive-portal.service /etc/systemd/system/captive-portal.service
-install -m 644 systemd/pi-hotspot-nm.service /etc/systemd/system/pi-hotspot-nm.service
-install -m 644 systemd/setup-hotspot.target /etc/systemd/system/setup-hotspot.target
-install -m 644 systemd/hotspot-shutdown.service /etc/systemd/system/hotspot-shutdown.service
-install -m 644 systemd/hotspot-shutdown.timer /etc/systemd/system/hotspot-shutdown.timer
+install -m 644 "$APP_DIR/systemd/hotspot-ui.service" /etc/systemd/system/hotspot-ui.service
+install -m 644 "$APP_DIR/systemd/captive-portal.service" /etc/systemd/system/captive-portal.service
+install -m 644 "$APP_DIR/systemd/pi-hotspot-nm.service" /etc/systemd/system/pi-hotspot-nm.service
+install -m 644 "$APP_DIR/systemd/setup-hotspot.target" /etc/systemd/system/setup-hotspot.target
+install -m 644 "$APP_DIR/systemd/hotspot-shutdown.service" /etc/systemd/system/hotspot-shutdown.service
+install -m 644 "$APP_DIR/systemd/hotspot-shutdown.timer" /etc/systemd/system/hotspot-shutdown.timer
 
 echo "[*] Reloading systemd..."
 systemctl daemon-reload
