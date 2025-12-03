@@ -1,6 +1,6 @@
 [Unit]
 Description=Captive Portal iptables rules
-After=network-online.target
+After=pi-hotspot-nm.service dnsmasq.service
 
 [Service]
 Type=oneshot

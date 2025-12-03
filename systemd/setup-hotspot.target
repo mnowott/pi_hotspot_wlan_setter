@@ -1,7 +1,8 @@
 [Unit]
 Description=Run NM Hotspot + Captive Portal + Hotspot UI
 Requires=pi-hotspot-nm.service dnsmasq.service captive-portal.service hotspot-ui.service
-After=network-online.target
+After=NetworkManager.service pi-hotspot-nm.service
+
 
 [Install]
 WantedBy=multi-user.target
