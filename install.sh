@@ -73,6 +73,8 @@ nmcli connection modify "$NM_HOTSPOT_NAME" \
   ipv4.method manual \
   ipv4.addresses "$HOTSPOT_IP" \
   ipv6.method ignore
+nmcli connection modify "$NM_HOTSPOT_NAME" connection.autoconnect no
+
 
 echo "[*] Installing captive portal script..."
 install -m 755 "$APP_DIR/scripts/captive-portal.sh" /usr/local/bin/captive-portal.sh

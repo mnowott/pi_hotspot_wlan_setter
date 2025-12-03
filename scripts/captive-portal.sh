@@ -7,13 +7,9 @@ WLAN_IF=wlan0
 case "$1" in
   start)
     echo "[captive-portal] Setting up iptables rules"
-    # Flush NAT table
     iptables -t nat -F
-
-    # Redirect HTTP on wlan0 to our app port
     iptables -t nat -A PREROUTING -i "$WLAN_IF" -p tcp --dport 80 \
       -j REDIRECT --to-port "$APP_PORT"
-
     ;;
 
   stop)
