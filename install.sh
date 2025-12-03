@@ -10,7 +10,6 @@ PY_VER="3.13.7"
 PY_TGZ="Python-$PY_VER.tgz"
 PY_DIR="Python-$PY_VER"
 PY_URL="https://www.python.org/ftp/python/$PY_VER/$PY_TGZ"
-PY_BIN="/usr/local/bin/python3.13"
 
 NM_HOTSPOT_NAME="pi-setup-hotspot"
 HOTSPOT_SSID="Pi-Setup"
@@ -28,10 +27,10 @@ apt update
 
 echo "[*] Installing system packages (dnsmasq + iptables + build deps)..."
 apt install -y \
-  dnsmasq iptables-persistent \
+  dnsmasq iptables-persistent network-manager \
   build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
   libnss3-dev libssl-dev libreadline-dev libffi-dev \
-  libsqlite3-dev wget git network-manager
+  libsqlite3-dev wget git
 
 echo "[*] Ensuring NetworkManager is enabled and running..."
 systemctl enable --now NetworkManager
@@ -41,7 +40,11 @@ systemctl stop dnsmasq || true
 systemctl disable dnsmasq || true
 
 echo "[*] Installing Python $PY_VER if needed..."
-if ! command -v python3.13 >/dev/null 2>&1; then
+PY_BIN=""
+if command -v python3.13 >/dev/null 2>&1; then
+  PY_BIN="$(command -v python3.13)"
+  echo "  - python3.13 already present at $PY_BIN, skipping build."
+else
   cd /tmp
   if [[ ! -f "$PY_TGZ" ]]; then
     wget "$PY_URL"
@@ -53,16 +56,16 @@ if ! command -v python3.13 >/dev/null 2>&1; then
   ./configure --enable-optimizations
   make -j"$(nproc)"
   make altinstall   # installs /usr/local/bin/python3.13
-else
-  echo "  - python3.13 already present, skipping build."
+  PY_BIN="/usr/local/bin/python3.13"
+  echo "  - Built and installed python3.13 at $PY_BIN"
 fi
 
-echo "[*] Ensuring pip for python3.13..."
-$PY_BIN -m ensurepip --upgrade || true
-$PY_BIN -m pip install --upgrade pip
+echo "[*] Ensuring pip for python3.13 at $PY_BIN..."
+"$PY_BIN" -m ensurepip --upgrade || true
+"$PY_BIN" -m pip install --upgrade pip
 
 echo "[*] Installing Poetry for user $APP_USER (using python3.13)..."
-sudo -u "$APP_USER" -H $PY_BIN -m pip install --user poetry
+sudo -u "$APP_USER" -H "$PY_BIN" -m pip install --user poetry
 
 echo "[*] Checking app directory at $APP_DIR..."
 if [[ ! -d "$APP_DIR" ]]; then
@@ -75,7 +78,7 @@ echo "[*] Running 'poetry install' for the app (from repo root, Python 3.13)..."
 sudo -u "$APP_USER" -H bash -lc "
   cd '$APP_DIR'
   export PATH=\$HOME/.local/bin:\$PATH
-  poetry env use $PY_BIN
+  poetry env use '$PY_BIN'
   poetry install --no-interaction
 "
 
@@ -127,6 +130,8 @@ systemctl enable hotspot-shutdown.timer
 echo
 echo "=========================================================="
 echo "Installation complete."
+echo
+echo "Python 3.13 used at: $PY_BIN"
 echo
 echo "On reboot:"
 echo "  - NetworkManager brings up the system normally"
