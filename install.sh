@@ -53,7 +53,7 @@ else
     tar -xf "$PY_TGZ"
   fi
   cd "$PY_DIR"
-  ./configure --enable-optimizations
+  ./configure
   make -j"$(nproc)"
   make altinstall   # installs /usr/local/bin/python3.13
   echo "  - Built and installed python3.13 at $PY_BIN"
