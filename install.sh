@@ -73,26 +73,35 @@ nmcli connection modify "$NM_HOTSPOT_NAME" \
   ipv4.method manual \
   ipv4.addresses "$HOTSPOT_IP" \
   ipv6.method ignore
-nmcli connection modify "$NM_HOTSPOT_NAME" connection.autoconnect no
 
+# Ensure hotspot is not auto-connected; we bring it up only via our services
+nmcli connection modify "$NM_HOTSPOT_NAME" connection.autoconnect no
 
 echo "[*] Installing captive portal script..."
 install -m 755 "$APP_DIR/scripts/captive-portal.sh" /usr/local/bin/captive-portal.sh
 
 echo "[*] Installing systemd units..."
-install -m 644 "$APP_DIR/systemd/hotspot-ui.service" /etc/systemd/system/hotspot-ui.service
-install -m 644 "$APP_DIR/systemd/captive-portal.service" /etc/systemd/system/captive-portal.service
-install -m 644 "$APP_DIR/systemd/pi-hotspot-nm.service" /etc/systemd/system/pi-hotspot-nm.service
-install -m 644 "$APP_DIR/systemd/setup-hotspot.target" /etc/systemd/system/setup-hotspot.target
-install -m 644 "$APP_DIR/systemd/hotspot-shutdown.service" /etc/systemd/system/hotspot-shutdown.service
-install -m 644 "$APP_DIR/systemd/hotspot-shutdown.timer" /etc/systemd/system/hotspot-shutdown.timer
+install -m 644 "$APP_DIR/systemd/hotspot-ui.service"          /etc/systemd/system/hotspot-ui.service
+install -m 644 "$APP_DIR/systemd/captive-portal.service"      /etc/systemd/system/captive-portal.service
+install -m 644 "$APP_DIR/systemd/pi-hotspot-nm.service"       /etc/systemd/system/pi-hotspot-nm.service
+install -m 644 "$APP_DIR/systemd/setup-hotspot.target"        /etc/systemd/system/setup-hotspot.target
+install -m 644 "$APP_DIR/systemd/hotspot-shutdown.service"    /etc/systemd/system/hotspot-shutdown.service
+install -m 644 "$APP_DIR/systemd/hotspot-shutdown.timer"      /etc/systemd/system/hotspot-shutdown.timer"
+install -m 644 "$APP_DIR/systemd/hotspot-onboot.service"      /etc/systemd/system/hotspot-onboot.service
 
 echo "[*] Reloading systemd..."
 systemctl daemon-reload
 
-echo "[*] Enabling hotspot-on-boot and 15-minute shutdown timer..."
-systemctl enable setup-hotspot.target
-systemctl enable hotspot-shutdown.timer
+echo "[*] Enabling hotspot-on-boot service..."
+systemctl enable hotspot-onboot.service
+
+# Make sure sub-services are not auto-started independently
+systemctl disable setup-hotspot.target || true
+systemctl disable hotspot-shutdown.timer || true
+systemctl disable hotspot-ui.service || true
+systemctl disable pi-hotspot-nm.service || true
+systemctl disable captive-portal.service || true
+# dnsmasq already disabled above
 
 echo
 echo "=========================================================="
@@ -101,11 +110,12 @@ echo
 echo "Using system Python (e.g. python3 from Pi OS) with a Poetry-managed virtualenv."
 echo
 echo "On reboot:"
-echo "  - NetworkManager brings up the system normally"
-echo "  - setup-hotspot.target starts the NM hotspot + dnsmasq + captive portal + UI"
-echo "  - hotspot-shutdown.timer stops them all after 15 minutes"
+echo "  - NetworkManager comes up"
+echo "  - hotspot-onboot.service starts setup-hotspot.target + hotspot-shutdown.timer"
+echo "  - Hotspot (AP + dnsmasq + captive portal + UI) runs for 15 minutes, then shuts down"
+echo "  - hotspot-shutdown.service attempts to reconnect wlan0 via NetworkManager"
 echo
 echo "Manual control:"
-echo "  Start hotspot  : sudo systemctl start setup-hotspot.target"
-echo "  Stop hotspot   : sudo systemctl stop setup-hotspot.target"
+echo "  Start hotspot  : sudo systemctl start setup-hotspot.target && sudo systemctl start hotspot-shutdown.timer"
+echo "  Stop hotspot   : sudo systemctl stop setup-hotspot.target && sudo systemctl stop hotspot-shutdown.timer"
 echo "=========================================================="
